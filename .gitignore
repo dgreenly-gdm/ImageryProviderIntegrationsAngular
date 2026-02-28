@@ -1,0 +1,23 @@
+# Angular
+AngularFrontend/node_modules/
+AngularFrontend/dist/
+AngularFrontend/.angular/
+
+# Java/Maven
+QuarkusBackend/target/
+QuarkusBackend/*.class
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
