@@ -34,6 +34,7 @@ import { SceneGridComponent } from './components/scene-grid/scene-grid.component
         [hasAoi]="hasAoi()"
         [isLoading]="isSearching()"
         [accentColor]="accentColor()"
+        [orderMode]="store.orderMode()"
         (search)="onSearch($event)" />
 
       <!-- Results area -->

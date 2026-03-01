@@ -25,32 +25,113 @@ import { OrderSummaryComponent } from '../../../shared/components/order-summary/
           </div>
         </div>
 
-        <!-- Delivery Schedule -->
-        <div class="rounded-lg border border-border bg-card p-4">
-          <h3 class="mb-3 text-sm font-semibold text-foreground">Delivery Schedule</h3>
+        @if (isHistorical) {
+          <!-- Historical mode hint -->
+          <div class="rounded-lg border border-border bg-card p-4">
+            <div class="flex items-start gap-3">
+              <svg class="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+              </svg>
+              <p class="text-sm text-muted-foreground">
+                You selected <span class="font-medium text-foreground">Historical Imagery</span>.
+                Delivery schedule dates are not required — the archived imagery you selected will be delivered upon order completion.
+              </p>
+            </div>
+          </div>
+        }
 
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div>
-              <label class="mb-1 block text-xs text-muted-foreground">Start Date</label>
-              <input type="date"
-                     class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
-                     [(ngModel)]="sched.startDate" (ngModelChange)="saveSchedule()" />
+        @if (!isHistorical) {
+          <!-- Delivery Schedule (Future mode only) -->
+          <div class="rounded-lg border border-border bg-card p-4">
+            <h3 class="mb-3 text-sm font-semibold text-foreground">Delivery Schedule</h3>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div>
+                <label class="mb-1 block text-xs text-muted-foreground">Start Date</label>
+                <input type="date"
+                       class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
+                       [(ngModel)]="sched.startDate" (ngModelChange)="saveSchedule()" />
+              </div>
+              <div>
+                <label class="mb-1 block text-xs text-muted-foreground">End Date</label>
+                <input type="date"
+                       class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
+                       [(ngModel)]="sched.endDate" (ngModelChange)="saveSchedule()" />
+              </div>
+              <div>
+                <label class="mb-1 block text-xs text-muted-foreground">Expiration Date</label>
+                <input type="date"
+                       class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
+                       [(ngModel)]="sched.expirationDate" (ngModelChange)="saveSchedule()" />
+              </div>
             </div>
-            <div>
-              <label class="mb-1 block text-xs text-muted-foreground">End Date</label>
-              <input type="date"
-                     class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
-                     [(ngModel)]="sched.endDate" (ngModelChange)="saveSchedule()" />
-            </div>
-            <div>
-              <label class="mb-1 block text-xs text-muted-foreground">Expiration Date</label>
-              <input type="date"
-                     class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
-                     [(ngModel)]="sched.expirationDate" (ngModelChange)="saveSchedule()" />
+
+            <div class="mt-4">
+              <label class="mb-2 block text-xs text-muted-foreground">Priority</label>
+              <app-radio-pill-group
+                [options]="priorityOptions"
+                [value]="sched.priority"
+                [accentColor]="store.family()?.color ?? '#3B82F6'"
+                (valueChange)="sched.priority = $event; saveSchedule()" />
             </div>
           </div>
 
-          <div class="mt-4">
+          <!-- Recurring Schedule (Future mode only) -->
+          <div class="rounded-lg border border-border bg-card p-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-foreground">Recurring Schedule</h3>
+              <label class="relative inline-flex cursor-pointer items-center">
+                <input type="checkbox" class="peer sr-only"
+                       [(ngModel)]="sched.recurring" (ngModelChange)="saveSchedule()" />
+                <div class="h-5 w-9 rounded-full bg-muted after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-foreground after:transition-all peer-checked:after:translate-x-full"
+                     [style.background-color]="sched.recurring ? (store.family()?.color ?? '#3B82F6') : undefined"></div>
+              </label>
+            </div>
+
+            @if (sched.recurring) {
+              <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label class="mb-1 block text-xs text-muted-foreground">Frequency</label>
+                  <select class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
+                          [(ngModel)]="sched.frequency" (ngModelChange)="saveSchedule()">
+                    <option value="">Select...</option>
+                    <option value="Daily">Daily</option>
+                    <option value="Weekly">Weekly</option>
+                    <option value="Biweekly">Biweekly</option>
+                    <option value="Monthly">Monthly</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-1 block text-xs text-muted-foreground">Day of Week</label>
+                  <select class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
+                          [(ngModel)]="sched.dayOfWeek" (ngModelChange)="saveSchedule()">
+                    <option value="">Select...</option>
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                    <option value="Sunday">Sunday</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-2 block text-xs text-muted-foreground">Delivery Window</label>
+                  <app-radio-pill-group
+                    [options]="windowOptions"
+                    [value]="sched.deliveryWindow"
+                    [accentColor]="store.family()?.color ?? '#3B82F6'"
+                    (valueChange)="sched.deliveryWindow = $event; saveSchedule()" />
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Priority (shown for both modes) -->
+        @if (isHistorical) {
+          <div class="rounded-lg border border-border bg-card p-4">
             <label class="mb-2 block text-xs text-muted-foreground">Priority</label>
             <app-radio-pill-group
               [options]="priorityOptions"
@@ -58,65 +139,14 @@ import { OrderSummaryComponent } from '../../../shared/components/order-summary/
               [accentColor]="store.family()?.color ?? '#3B82F6'"
               (valueChange)="sched.priority = $event; saveSchedule()" />
           </div>
-        </div>
-
-        <!-- Recurring Schedule -->
-        <div class="rounded-lg border border-border bg-card p-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-foreground">Recurring Schedule</h3>
-            <label class="relative inline-flex cursor-pointer items-center">
-              <input type="checkbox" class="peer sr-only"
-                     [(ngModel)]="sched.recurring" (ngModelChange)="saveSchedule()" />
-              <div class="h-5 w-9 rounded-full bg-muted after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-foreground after:transition-all peer-checked:after:translate-x-full"
-                   [style.background-color]="sched.recurring ? (store.family()?.color ?? '#3B82F6') : undefined"></div>
-            </label>
-          </div>
-
-          @if (sched.recurring) {
-            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div>
-                <label class="mb-1 block text-xs text-muted-foreground">Frequency</label>
-                <select class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
-                        [(ngModel)]="sched.frequency" (ngModelChange)="saveSchedule()">
-                  <option value="">Select...</option>
-                  <option value="Daily">Daily</option>
-                  <option value="Weekly">Weekly</option>
-                  <option value="Biweekly">Biweekly</option>
-                  <option value="Monthly">Monthly</option>
-                </select>
-              </div>
-              <div>
-                <label class="mb-1 block text-xs text-muted-foreground">Day of Week</label>
-                <select class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
-                        [(ngModel)]="sched.dayOfWeek" (ngModelChange)="saveSchedule()">
-                  <option value="">Select...</option>
-                  <option value="Monday">Monday</option>
-                  <option value="Tuesday">Tuesday</option>
-                  <option value="Wednesday">Wednesday</option>
-                  <option value="Thursday">Thursday</option>
-                  <option value="Friday">Friday</option>
-                  <option value="Saturday">Saturday</option>
-                  <option value="Sunday">Sunday</option>
-                </select>
-              </div>
-              <div>
-                <label class="mb-2 block text-xs text-muted-foreground">Delivery Window</label>
-                <app-radio-pill-group
-                  [options]="windowOptions"
-                  [value]="sched.deliveryWindow"
-                  [accentColor]="store.family()?.color ?? '#3B82F6'"
-                  (valueChange)="sched.deliveryWindow = $event; saveSchedule()" />
-              </div>
-            </div>
-          }
-        </div>
+        }
 
         <div class="flex gap-3">
           <button class="rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80"
                   (click)="goBack()">Back</button>
           <button class="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
                   [style.background-color]="store.family()?.color ?? '#3B82F6'"
-                  [disabled]="!sched.orderName || !sched.startDate || !sched.endDate"
+                  [disabled]="!canContinue"
                   (click)="goNext()">Continue</button>
         </div>
       </div>
@@ -155,6 +185,18 @@ export class ScheduleComponent implements OnInit {
     { value: 'Evening', label: 'Evening' },
     { value: 'Overnight', label: 'Overnight' },
   ];
+
+  get isHistorical(): boolean {
+    return this.store.orderMode() === 'historical';
+  }
+
+  get canContinue(): boolean {
+    if (!this.sched.orderName) return false;
+    if (!this.isHistorical) {
+      return this.sched.startDate !== '' && this.sched.endDate !== '';
+    }
+    return true;
+  }
 
   ngOnInit(): void {
     const s = this.store.schedule();

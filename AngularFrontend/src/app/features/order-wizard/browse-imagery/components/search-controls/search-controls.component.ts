@@ -1,5 +1,6 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { OrderMode } from '../../../../../core/models/order.model';
 
 export interface SearchFormValues {
   startDate: string;
@@ -70,17 +71,27 @@ export interface SearchFormValues {
     </div>
   `,
 })
-export class SearchControlsComponent {
+export class SearchControlsComponent implements OnInit {
   hasAoi = input<boolean>(false);
   isLoading = input<boolean>(false);
   accentColor = input<string>('#3B82F6');
+  orderMode = input<'future' | 'historical' | null>(null);
   search = output<SearchFormValues>();
 
   formValues: SearchFormValues = {
-    startDate: this.defaultStartDate(),
-    endDate: this.defaultEndDate(),
+    startDate: '',
+    endDate: '',
     cloudCoverMax: 30,
   };
+
+  ngOnInit(): void {
+    const mode = this.orderMode();
+    const daysBack = mode === 'future' ? 7 : 90;
+    const start = new Date();
+    start.setDate(start.getDate() - daysBack);
+    this.formValues.startDate = start.toISOString().slice(0, 10);
+    this.formValues.endDate = new Date().toISOString().slice(0, 10);
+  }
 
   get canSearch(): boolean {
     return this.hasAoi()
@@ -91,15 +102,5 @@ export class SearchControlsComponent {
 
   onSearch(): void {
     this.search.emit({ ...this.formValues });
-  }
-
-  private defaultStartDate(): string {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().slice(0, 10);
-  }
-
-  private defaultEndDate(): string {
-    return new Date().toISOString().slice(0, 10);
   }
 }

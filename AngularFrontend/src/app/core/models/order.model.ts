@@ -1,3 +1,5 @@
+export type OrderMode = 'future' | 'historical';
+
 export interface OrderConfiguration {
   poi: PointOfInterest | null;
   cloudCoverMax: number;

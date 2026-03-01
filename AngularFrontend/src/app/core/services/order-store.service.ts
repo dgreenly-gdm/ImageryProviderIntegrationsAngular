@@ -1,6 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { FamilyConfig, ImageryTypeConfig, ImageryTierConfig } from '../models/product.model';
-import { OrderConfiguration, OrderSchedule } from '../models/order.model';
+import { OrderConfiguration, OrderSchedule, OrderMode } from '../models/order.model';
 import { StacItem, StacSearchParams, AreaOfInterest } from '../models/stac.model';
 
 const defaultConfiguration: OrderConfiguration = {
@@ -36,6 +36,7 @@ const defaultStacSearchParams: StacSearchParams = {
 @Injectable({ providedIn: 'root' })
 export class OrderStoreService {
   // Product Selection
+  readonly orderMode = signal<OrderMode | null>(null);
   readonly family = signal<FamilyConfig | null>(null);
   readonly productType = signal<ImageryTypeConfig | null>(null);
   readonly tier = signal<ImageryTierConfig | null>(null);
@@ -54,6 +55,7 @@ export class OrderStoreService {
   // Computed current step
   readonly currentStep = computed(() => {
     const family = this.family();
+    const mode = this.orderMode();
     const productType = this.productType();
     const tier = this.tier();
     const scenes = this.selectedScenes();
@@ -61,15 +63,31 @@ export class OrderStoreService {
     const sched = this.schedule();
 
     if (!family) return 1;
-    if (!productType || !tier) return 2;
+    if (!mode || !productType || !tier) return 2;
     if (scenes.length === 0) return 3;
     if (!config.deliveryFormat || !config.processingLevel) return 4;
-    if (!sched.orderName || !sched.startDate || !sched.endDate) return 5;
+    if (mode === 'historical') {
+      if (!sched.orderName) return 5;
+    } else {
+      if (!sched.orderName || !sched.startDate || !sched.endDate) return 5;
+    }
     return 6;
   });
 
+  setOrderMode(mode: OrderMode): void {
+    this.orderMode.set(mode);
+    this.productType.set(null);
+    this.tier.set(null);
+    this.areaOfInterest.set(null);
+    this.stacResults.set([]);
+    this.stacTotalMatched.set(0);
+    this.selectedScenes.set([]);
+    this.stacSearchParams.set({ ...defaultStacSearchParams });
+  }
+
   setFamily(family: FamilyConfig): void {
     this.family.set(family);
+    this.orderMode.set(null);
     this.productType.set(null);
     this.tier.set(null);
     this.areaOfInterest.set(null);
@@ -126,6 +144,7 @@ export class OrderStoreService {
 
   reset(): void {
     this.family.set(null);
+    this.orderMode.set(null);
     this.productType.set(null);
     this.tier.set(null);
     this.configuration.set({ ...defaultConfiguration });
