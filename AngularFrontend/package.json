@@ -20,6 +20,7 @@
     "@bluehalo/ngx-leaflet": "^19.0.0",
     "@bluehalo/ngx-leaflet-draw": "^19.0.0",
     "@tailwindcss/postcss": "^4.2.1",
+    "flatpickr": "^4.6.13",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
     "lucide-angular": "^0.575.0",

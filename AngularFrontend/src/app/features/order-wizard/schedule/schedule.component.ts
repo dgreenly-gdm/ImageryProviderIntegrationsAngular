@@ -1,9 +1,11 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, AfterViewInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { OrderStoreService } from '../../../core/services/order-store.service';
 import { RadioPillGroupComponent, PillOption } from '../../../shared/components/radio-pill-group/radio-pill-group.component';
 import { OrderSummaryComponent } from '../../../shared/components/order-summary/order-summary.component';
+import flatpickr from 'flatpickr';
+import { Instance as FlatpickrInstance } from 'flatpickr/dist/types/instance';
 
 @Component({
   selector: 'app-schedule',
@@ -49,31 +51,19 @@ import { OrderSummaryComponent } from '../../../shared/components/order-summary/
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
                 <label class="mb-1 block text-xs text-muted-foreground">Start Date</label>
-                <input type="date"
-                       class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
-                       [(ngModel)]="sched.startDate" (ngModelChange)="saveSchedule()" />
+                <input #startDateInput type="text" placeholder="Select start date..."
+                       class="flatpickr-input w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground" readonly />
               </div>
               <div>
                 <label class="mb-1 block text-xs text-muted-foreground">End Date</label>
-                <input type="date"
-                       class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
-                       [(ngModel)]="sched.endDate" (ngModelChange)="saveSchedule()" />
+                <input #endDateInput type="text" placeholder="Select end date..."
+                       class="flatpickr-input w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground" readonly />
               </div>
               <div>
                 <label class="mb-1 block text-xs text-muted-foreground">Expiration Date</label>
-                <input type="date"
-                       class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
-                       [(ngModel)]="sched.expirationDate" (ngModelChange)="saveSchedule()" />
+                <input #expirationDateInput type="text" placeholder="Optional..."
+                       class="flatpickr-input w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground" readonly />
               </div>
-            </div>
-
-            <div class="mt-4">
-              <label class="mb-2 block text-xs text-muted-foreground">Priority</label>
-              <app-radio-pill-group
-                [options]="priorityOptions"
-                [value]="sched.priority"
-                [accentColor]="store.family()?.color ?? '#3B82F6'"
-                (valueChange)="sched.priority = $event; saveSchedule()" />
             </div>
           </div>
 
@@ -129,18 +119,6 @@ import { OrderSummaryComponent } from '../../../shared/components/order-summary/
           </div>
         }
 
-        <!-- Priority (shown for both modes) -->
-        @if (isHistorical) {
-          <div class="rounded-lg border border-border bg-card p-4">
-            <label class="mb-2 block text-xs text-muted-foreground">Priority</label>
-            <app-radio-pill-group
-              [options]="priorityOptions"
-              [value]="sched.priority"
-              [accentColor]="store.family()?.color ?? '#3B82F6'"
-              (valueChange)="sched.priority = $event; saveSchedule()" />
-          </div>
-        }
-
         <div class="flex gap-3">
           <button class="rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80"
                   (click)="goBack()">Back</button>
@@ -157,9 +135,17 @@ import { OrderSummaryComponent } from '../../../shared/components/order-summary/
     </div>
   `,
 })
-export class ScheduleComponent implements OnInit {
+export class ScheduleComponent implements OnInit, AfterViewInit, OnDestroy {
   store = inject(OrderStoreService);
   private router = inject(Router);
+
+  @ViewChild('startDateInput') startDateInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('endDateInput') endDateInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('expirationDateInput') expirationDateInput!: ElementRef<HTMLInputElement>;
+
+  private fpStart: FlatpickrInstance | null = null;
+  private fpEnd: FlatpickrInstance | null = null;
+  private fpExpiration: FlatpickrInstance | null = null;
 
   sched = {
     orderName: '',
@@ -172,12 +158,6 @@ export class ScheduleComponent implements OnInit {
     dayOfWeek: '',
     deliveryWindow: '',
   };
-
-  priorityOptions: PillOption[] = [
-    { value: 'Standard', label: 'Standard' },
-    { value: 'High', label: 'High' },
-    { value: 'Urgent', label: 'Urgent' },
-  ];
 
   windowOptions: PillOption[] = [
     { value: 'Morning', label: 'Morning' },
@@ -201,6 +181,64 @@ export class ScheduleComponent implements OnInit {
   ngOnInit(): void {
     const s = this.store.schedule();
     this.sched = { ...s };
+  }
+
+  ngAfterViewInit(): void {
+    if (!this.isHistorical) {
+      this.initFlatpickr();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.fpStart?.destroy();
+    this.fpEnd?.destroy();
+    this.fpExpiration?.destroy();
+  }
+
+  private initFlatpickr(): void {
+    const baseConfig = {
+      altInput: true,
+      altFormat: 'F j, Y',
+      dateFormat: 'Y-m-d',
+      minDate: 'today' as const,
+    };
+
+    if (this.startDateInput) {
+      this.fpStart = flatpickr(this.startDateInput.nativeElement, {
+        ...baseConfig,
+        defaultDate: this.sched.startDate || undefined,
+        onChange: (_dates: Date[], dateStr: string) => {
+          this.sched.startDate = dateStr;
+          this.saveSchedule();
+          if (this.fpEnd) {
+            this.fpEnd.set('minDate', dateStr);
+          }
+        },
+      });
+    }
+
+    if (this.endDateInput) {
+      this.fpEnd = flatpickr(this.endDateInput.nativeElement, {
+        ...baseConfig,
+        defaultDate: this.sched.endDate || undefined,
+        minDate: this.sched.startDate || 'today',
+        onChange: (_dates: Date[], dateStr: string) => {
+          this.sched.endDate = dateStr;
+          this.saveSchedule();
+        },
+      });
+    }
+
+    if (this.expirationDateInput) {
+      this.fpExpiration = flatpickr(this.expirationDateInput.nativeElement, {
+        ...baseConfig,
+        defaultDate: this.sched.expirationDate || undefined,
+        onChange: (_dates: Date[], dateStr: string) => {
+          this.sched.expirationDate = dateStr;
+          this.saveSchedule();
+        },
+      });
+    }
   }
 
   saveSchedule(): void {

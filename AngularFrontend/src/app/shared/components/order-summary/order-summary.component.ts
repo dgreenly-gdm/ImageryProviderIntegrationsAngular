@@ -63,10 +63,15 @@ import { FamilyBadgeComponent } from '../family-badge/family-badge.component';
         </div>
       }
 
-      @if (store.configuration().deliveryFormat) {
+      @if (store.anyAvailable()) {
         <div class="mb-3 space-y-1">
-          <p class="text-xs text-muted-foreground">Delivery Format</p>
-          <p class="text-sm text-foreground">{{ store.configuration().deliveryFormat }}</p>
+          <p class="text-xs text-muted-foreground">Search Mode</p>
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-400">
+            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            Any Available
+          </span>
         </div>
       }
 

@@ -8,6 +8,9 @@ import { FAMILIES, FamilyConfig } from '../../../core/models/product.model';
   standalone: true,
   template: `
     <div>
+      <div class="mb-6 flex justify-center">
+        <img src="/MP_Logo.png" alt="Global Data Marketplace" class="h-24" />
+      </div>
       <h1 class="mb-2 text-2xl font-bold text-foreground">Select Product Family</h1>
       <p class="mb-6 text-sm text-muted-foreground">Choose a product family to begin your order.</p>
 

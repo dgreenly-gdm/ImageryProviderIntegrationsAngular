@@ -37,6 +37,7 @@ const defaultStacSearchParams: StacSearchParams = {
 export class OrderStoreService {
   // Product Selection
   readonly orderMode = signal<OrderMode | null>(null);
+  readonly anyAvailable = signal(false);
   readonly family = signal<FamilyConfig | null>(null);
   readonly productType = signal<ImageryTypeConfig | null>(null);
   readonly tier = signal<ImageryTierConfig | null>(null);
@@ -62,10 +63,12 @@ export class OrderStoreService {
     const config = this.configuration();
     const sched = this.schedule();
 
+    const anyAvail = this.anyAvailable();
+
     if (!family) return 1;
-    if (!mode || !productType || !tier) return 2;
+    if (!mode || (!anyAvail && (!productType || !tier))) return 2;
     if (scenes.length === 0) return 3;
-    if (!config.deliveryFormat || !config.processingLevel) return 4;
+    // Step 4 (configure) no longer gates on delivery format
     if (mode === 'historical') {
       if (!sched.orderName) return 5;
     } else {
@@ -76,6 +79,7 @@ export class OrderStoreService {
 
   setOrderMode(mode: OrderMode): void {
     this.orderMode.set(mode);
+    this.anyAvailable.set(false);
     this.productType.set(null);
     this.tier.set(null);
     this.areaOfInterest.set(null);
@@ -142,9 +146,18 @@ export class OrderStoreService {
     this.selectedScenes.set([]);
   }
 
+  setAnyAvailable(val: boolean): void {
+    this.anyAvailable.set(val);
+    if (val) {
+      this.productType.set(null);
+      this.tier.set(null);
+    }
+  }
+
   reset(): void {
     this.family.set(null);
     this.orderMode.set(null);
+    this.anyAvailable.set(false);
     this.productType.set(null);
     this.tier.set(null);
     this.configuration.set({ ...defaultConfiguration });

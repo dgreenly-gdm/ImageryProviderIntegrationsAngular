@@ -76,6 +76,7 @@ export class SearchControlsComponent implements OnInit {
   isLoading = input<boolean>(false);
   accentColor = input<string>('#3B82F6');
   orderMode = input<'future' | 'historical' | null>(null);
+  anyAvailable = input<boolean>(false);
   search = output<SearchFormValues>();
 
   formValues: SearchFormValues = {
@@ -86,7 +87,13 @@ export class SearchControlsComponent implements OnInit {
 
   ngOnInit(): void {
     const mode = this.orderMode();
-    const daysBack = mode === 'future' ? 7 : 90;
+    const isAny = this.anyAvailable();
+    let daysBack = 90;
+    if (isAny) {
+      daysBack = 365;
+    } else if (mode === 'future') {
+      daysBack = 7;
+    }
     const start = new Date();
     start.setDate(start.getDate() - daysBack);
     this.formValues.startDate = start.toISOString().slice(0, 10);

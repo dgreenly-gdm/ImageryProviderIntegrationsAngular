@@ -64,8 +64,23 @@ import { OrderSummaryComponent } from '../../../shared/components/order-summary/
           </div>
         </div>
 
-        <!-- Type Selector (shown after mode is selected) -->
-        @if (store.orderMode()) {
+        <!-- Any Available toggle (Historical mode only) -->
+        @if (store.orderMode() === 'historical') {
+          <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-card p-4">
+            <input type="checkbox" class="peer sr-only"
+                   [checked]="store.anyAvailable()"
+                   (change)="onAnyAvailableToggle($event)" />
+            <div class="relative h-5 w-9 shrink-0 rounded-full bg-muted after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-foreground after:transition-all peer-checked:after:translate-x-full"
+                 [style.background-color]="store.anyAvailable() ? accentColor : undefined"></div>
+            <div>
+              <p class="text-sm font-medium text-foreground">Any Available Imagery</p>
+              <p class="text-xs text-muted-foreground">Browse all archived imagery without filtering by type or tier</p>
+            </div>
+          </label>
+        }
+
+        <!-- Type Selector (shown after mode is selected, hidden when anyAvailable) -->
+        @if (store.orderMode() && !store.anyAvailable()) {
           <app-type-selector
             [types]="imageryTypes"
             [selectedId]="store.productType()?.id ?? null"
@@ -73,10 +88,10 @@ import { OrderSummaryComponent } from '../../../shared/components/order-summary/
             (typeSelected)="onTypeSelected($event)" />
         }
 
-        <!-- Tier Selector (shown after type is selected) -->
-        @if (store.productType(); as type) {
+        <!-- Tier Selector (shown after type is selected, hidden when anyAvailable) -->
+        @if (store.productType() && !store.anyAvailable()) {
           <app-tier-selector
-            [tiers]="type.tiers"
+            [tiers]="store.productType()!.tiers"
             [selectedId]="store.tier()?.id ?? null"
             [accentColor]="accentColor"
             (tierSelected)="onTierSelected($event)" />
@@ -87,7 +102,7 @@ import { OrderSummaryComponent } from '../../../shared/components/order-summary/
                   (click)="goBack()">Back</button>
           <button class="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
                   [style.background-color]="accentColor"
-                  [disabled]="!store.orderMode() || !store.productType() || !store.tier()"
+                  [disabled]="!canContinue"
                   (click)="goNext()">Continue</button>
         </div>
       </div>
@@ -107,8 +122,19 @@ export class SelectProductsComponent {
     return this.store.family()?.color ?? '#3B82F6';
   }
 
+  get canContinue(): boolean {
+    if (!this.store.orderMode()) return false;
+    if (this.store.anyAvailable()) return true;
+    return !!this.store.productType() && !!this.store.tier();
+  }
+
   onModeSelected(mode: OrderMode): void {
     this.store.setOrderMode(mode);
+  }
+
+  onAnyAvailableToggle(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.store.setAnyAvailable(checked);
   }
 
   onTypeSelected(type: ImageryTypeConfig): void {

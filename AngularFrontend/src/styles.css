@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 @import "leaflet-draw/dist/leaflet.draw.css";
+@import "flatpickr/dist/flatpickr.min.css";
+@import "flatpickr/dist/themes/dark.css";
 
 :root {
   --family-blue: #3B82F6;

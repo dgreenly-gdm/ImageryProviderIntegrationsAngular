@@ -59,49 +59,26 @@ import { OrderSummaryComponent } from '../../../shared/components/order-summary/
               [accentColor]="store.family()?.color ?? '#3B82F6'"
               (valuesChange)="config.spectralBands = $event; saveConfig()" />
           </div>
-        </div>
-
-        <!-- Delivery Settings -->
-        <div class="rounded-lg border border-border bg-card p-4">
-          <h3 class="mb-3 text-sm font-semibold text-foreground">Delivery Settings</h3>
-
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label class="mb-1 block text-xs text-muted-foreground">Delivery Format</label>
-              <select class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
-                      [(ngModel)]="config.deliveryFormat" (ngModelChange)="saveConfig()">
-                <option value="">Select format...</option>
-                <option value="GeoTIFF">GeoTIFF</option>
-                <option value="NITF">NITF</option>
-                <option value="JPEG2000">JPEG2000</option>
-              </select>
-            </div>
-            <div>
-              <label class="mb-1 block text-xs text-muted-foreground">Processing Level</label>
-              <select class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
-                      [(ngModel)]="config.processingLevel" (ngModelChange)="saveConfig()">
-                <option value="">Select level...</option>
-                <option value="Raw">Raw</option>
-                <option value="Orthorectified">Orthorectified</option>
-                <option value="Pansharpened">Pansharpened</option>
-              </select>
-            </div>
-          </div>
 
           <div class="mt-4">
-            <label class="mb-1 block text-xs text-muted-foreground">Notes / Special Instructions</label>
-            <textarea rows="3"
-                      class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
-                      [(ngModel)]="config.notes" (ngModelChange)="saveConfig()"></textarea>
+            <label class="mb-1 block text-xs text-muted-foreground">Data Format</label>
+            <p class="text-sm text-foreground">{{ getDataFormat() }}</p>
           </div>
+        </div>
+
+        <!-- Notes / Special Instructions -->
+        <div class="rounded-lg border border-border bg-card p-4">
+          <h3 class="mb-3 text-sm font-semibold text-foreground">Notes / Special Instructions</h3>
+          <textarea rows="3" placeholder="Any special requirements for this order..."
+                    class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
+                    [(ngModel)]="config.notes" (ngModelChange)="saveConfig()"></textarea>
         </div>
 
         <div class="flex gap-3">
           <button class="rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80"
                   (click)="goBack()">Back</button>
-          <button class="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          <button class="rounded-lg px-4 py-2 text-sm font-medium text-white"
                   [style.background-color]="store.family()?.color ?? '#3B82F6'"
-                  [disabled]="!config.deliveryFormat || !config.processingLevel"
                   (click)="goNext()">Continue</button>
         </div>
       </div>
@@ -119,8 +96,6 @@ export class ConfigureComponent implements OnInit {
   config = {
     cloudCoverMax: 20,
     spectralBands: [] as string[],
-    deliveryFormat: '',
-    processingLevel: '',
     notes: '',
   };
 
@@ -138,12 +113,21 @@ export class ConfigureComponent implements OnInit {
     return dt ? new Date(dt).toLocaleDateString() : scene.id;
   }
 
+  getDataFormat(): string {
+    const scenes = this.store.selectedScenes();
+    if (scenes.length === 0) return 'N/A';
+    const collections = new Set(scenes.map(s => s.collection));
+    const hasSar = [...collections].some(c => c.includes('sentinel-1'));
+    const hasOptical = [...collections].some(c => c.includes('sentinel-2') || c.includes('landsat'));
+    if (hasSar && hasOptical) return 'GeoTIFF (mixed formats)';
+    if (hasSar) return 'GeoTIFF';
+    return 'Cloud Optimized GeoTIFF (COG)';
+  }
+
   ngOnInit(): void {
     const c = this.store.configuration();
     this.config.cloudCoverMax = c.cloudCoverMax;
     this.config.spectralBands = [...c.spectralBands];
-    this.config.deliveryFormat = c.deliveryFormat;
-    this.config.processingLevel = c.processingLevel;
     this.config.notes = c.notes;
   }
 
@@ -151,8 +135,6 @@ export class ConfigureComponent implements OnInit {
     this.store.updateConfig({
       cloudCoverMax: this.config.cloudCoverMax,
       spectralBands: this.config.spectralBands,
-      deliveryFormat: this.config.deliveryFormat,
-      processingLevel: this.config.processingLevel,
       notes: this.config.notes,
     });
   }

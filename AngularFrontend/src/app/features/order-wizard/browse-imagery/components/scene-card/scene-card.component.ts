@@ -46,11 +46,16 @@ import { StacItem } from '../../../../../core/models/stac.model';
 
       <!-- Metadata -->
       <div class="p-2.5">
-        <div class="flex items-center justify-between gap-1">
+        <div class="flex items-center gap-1 flex-wrap">
           <span class="truncate rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground">
             {{ formatCollection(item.collection) }}
           </span>
-          <span class="flex items-center gap-0.5 text-[10px] text-muted-foreground whitespace-nowrap">
+          <span class="rounded px-1.5 py-0.5 text-[10px] font-medium"
+                [style.background-color]="accentColor() + '20'"
+                [style.color]="accentColor()">
+            {{ getImageryType(item.collection) }}
+          </span>
+          <span class="ml-auto flex items-center gap-0.5 text-[10px] text-muted-foreground whitespace-nowrap">
             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
             </svg>
@@ -93,6 +98,14 @@ export class SceneCardComponent {
   getCloudCover(item: StacItem): string {
     const cc = item.properties['eo:cloud_cover'] as number;
     return cc != null ? cc.toFixed(1) : 'N/A';
+  }
+
+  getImageryType(collection: string): string {
+    if (!collection) return 'Imagery';
+    if (collection.includes('sentinel-2')) return 'Optical';
+    if (collection.includes('sentinel-1')) return 'SAR';
+    if (collection.includes('landsat')) return 'Multispectral';
+    return 'Imagery';
   }
 
   formatCollection(name: string): string {

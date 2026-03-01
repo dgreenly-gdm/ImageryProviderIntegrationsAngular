@@ -35,6 +35,7 @@ import { SceneGridComponent } from './components/scene-grid/scene-grid.component
         [isLoading]="isSearching()"
         [accentColor]="accentColor()"
         [orderMode]="store.orderMode()"
+        [anyAvailable]="store.anyAvailable()"
         (search)="onSearch($event)" />
 
       <!-- Results area -->
@@ -50,6 +51,23 @@ import { SceneGridComponent } from './components/scene-grid/scene-grid.component
         (loadMore)="onLoadMore()"
         (retry)="onRetry()" />
 
+      <!-- Future-mode prompt: user selected archived scenes while in Future mode -->
+      @if (showFuturePrompt()) {
+        <div class="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+          <p class="mb-3 text-sm text-foreground">
+            You've selected existing archived scenes while in <strong>Future Collection</strong> mode.
+            Would you like to receive these as a historical delivery, or continue setting up a future collection order?
+          </p>
+          <div class="flex gap-3">
+            <button class="rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80"
+                    (click)="switchToHistorical()">Switch to Historical</button>
+            <button class="rounded-lg px-4 py-2 text-sm font-medium text-white"
+                    [style.background-color]="accentColor()"
+                    (click)="continueAsFuture()">Continue as Future</button>
+          </div>
+        </div>
+      }
+
       <!-- Navigation -->
       <div class="flex items-center justify-between border-t border-border pt-4">
         <button class="rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80"
@@ -57,7 +75,7 @@ import { SceneGridComponent } from './components/scene-grid/scene-grid.component
         <button class="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
                 [style.background-color]="accentColor()"
                 [disabled]="store.selectedScenes().length === 0"
-                (click)="goNext()">
+                (click)="onContinueClick()">
           Continue ({{ store.selectedScenes().length }} selected)
         </button>
       </div>
@@ -81,6 +99,7 @@ export class BrowseImageryComponent {
   isSearching = signal(false);
   hasSearched = signal(false);
   searchError = signal<string | null>(null);
+  showFuturePrompt = signal(false);
   private lastSearchForm: SearchFormValues | null = null;
 
   accentColor = (): string => this.store.family()?.color ?? '#3B82F6';
@@ -173,6 +192,25 @@ export class BrowseImageryComponent {
       },
       error: (err) => console.error('Load more failed:', err),
     });
+  }
+
+  onContinueClick(): void {
+    if (this.store.orderMode() === 'future' && this.store.selectedScenes().length > 0) {
+      this.showFuturePrompt.set(true);
+      return;
+    }
+    this.goNext();
+  }
+
+  switchToHistorical(): void {
+    this.store.orderMode.set('historical');
+    this.showFuturePrompt.set(false);
+    this.goNext();
+  }
+
+  continueAsFuture(): void {
+    this.showFuturePrompt.set(false);
+    this.goNext();
   }
 
   goBack(): void {
