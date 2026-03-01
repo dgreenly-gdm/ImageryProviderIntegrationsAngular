@@ -1,9 +1,16 @@
+export interface StacAsset {
+  href: string;
+  type?: string;
+  title?: string;
+  roles?: string[];
+}
+
 export interface StacItem {
   id: string;
   type: string;
   properties: Record<string, unknown>;
   geometry: StacGeometry;
-  assets: Record<string, unknown>;
+  assets: Record<string, StacAsset>;
   collection: string;
 }
 

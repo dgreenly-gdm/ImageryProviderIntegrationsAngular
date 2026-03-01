@@ -1,23 +1,36 @@
-import { Component, inject, input, output, OnInit, OnDestroy, NgZone, ElementRef, viewChild, afterNextRender } from '@angular/core';
+import { Component, inject, input, output, NgZone, ElementRef, viewChild, afterNextRender } from '@angular/core';
 import * as L from 'leaflet';
 import 'leaflet-draw';
-import { StacItem } from '../../../../../core/models/stac.model';
-import { AreaOfInterest } from '../../../../../core/models/stac.model';
+import { StacItem, AreaOfInterest } from '../../../../../core/models/stac.model';
 
 @Component({
   selector: 'app-imagery-map',
   standalone: true,
   template: `
-    <div #mapContainer class="h-[500px] w-full rounded-lg border border-border"></div>
+    <div class="relative">
+      <div #mapContainer class="h-[550px] w-full rounded-lg border border-border"></div>
+
+      <!-- Overlay hint when no AOI drawn -->
+      @if (!hasAoi()) {
+        <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div class="rounded-lg bg-background/80 px-4 py-2 backdrop-blur-sm">
+            <p class="text-sm text-muted-foreground">
+              Use the draw tools (top right) to select an area of interest
+            </p>
+          </div>
+        </div>
+      }
+    </div>
   `,
 })
-export class ImageryMapComponent implements OnInit, OnDestroy {
+export class ImageryMapComponent {
   private ngZone = inject(NgZone);
   mapContainer = viewChild.required<ElementRef>('mapContainer');
 
   accentColor = input<string>('#3B82F6');
   stacResults = input<StacItem[]>([]);
   selectedSceneIds = input<string[]>([]);
+  hasAoi = input<boolean>(false);
   aoiChanged = output<AreaOfInterest>();
   sceneClicked = output<StacItem>();
 
@@ -30,8 +43,6 @@ export class ImageryMapComponent implements OnInit, OnDestroy {
       this.initMap();
     });
   }
-
-  ngOnInit(): void {}
 
   ngOnDestroy(): void {
     if (this.map) {

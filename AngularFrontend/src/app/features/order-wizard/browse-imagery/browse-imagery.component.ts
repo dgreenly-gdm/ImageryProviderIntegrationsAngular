@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, viewChild, effect } from '@angular/core';
+import { Component, inject, signal, viewChild, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { OrderStoreService } from '../../../core/services/order-store.service';
 import { CatalogApiService } from '../../../core/services/catalog-api.service';
@@ -6,71 +6,79 @@ import { StacItem, AreaOfInterest } from '../../../core/models/stac.model';
 import { SearchControlsComponent, SearchFormValues } from './components/search-controls/search-controls.component';
 import { ImageryMapComponent } from './components/imagery-map/imagery-map.component';
 import { SceneGridComponent } from './components/scene-grid/scene-grid.component';
-import { OrderSummaryComponent } from '../../../shared/components/order-summary/order-summary.component';
 
 @Component({
   selector: 'app-browse-imagery',
   standalone: true,
-  imports: [SearchControlsComponent, ImageryMapComponent, SceneGridComponent, OrderSummaryComponent],
+  imports: [SearchControlsComponent, ImageryMapComponent, SceneGridComponent],
   template: `
-    <div class="flex gap-6">
-      <div class="flex-1 space-y-4">
+    <div class="space-y-4">
+      <div>
         <h1 class="text-2xl font-bold text-foreground">Browse Imagery</h1>
-        <p class="text-sm text-muted-foreground">Draw an area of interest on the map, then search the STAC catalog.</p>
-
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div class="lg:col-span-1">
-            <app-search-controls
-              [availableCollections]="collections"
-              [accentColor]="store.family()?.color ?? '#3B82F6'"
-              (search)="onSearch($event)" />
-          </div>
-          <div class="lg:col-span-2">
-            <app-imagery-map #imageryMap
-              [accentColor]="store.family()?.color ?? '#3B82F6'"
-              [stacResults]="store.stacResults()"
-              [selectedSceneIds]="selectedSceneIds()"
-              (aoiChanged)="onAoiChanged($event)"
-              (sceneClicked)="onSceneClicked($event)" />
-          </div>
-        </div>
-
-        <app-scene-grid
-          [scenes]="store.stacResults()"
-          [totalMatched]="store.stacTotalMatched()"
-          [selectedIds]="selectedSceneIds()"
-          [accentColor]="store.family()?.color ?? '#3B82F6'"
-          (sceneToggled)="onSceneClicked($event)"
-          (loadMore)="onLoadMore()" />
-
-        <div class="flex gap-3">
-          <button class="rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80"
-                  (click)="goBack()">Back</button>
-          <button class="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-                  [style.background-color]="store.family()?.color ?? '#3B82F6'"
-                  [disabled]="store.selectedScenes().length === 0"
-                  (click)="goNext()">
-            Continue ({{ store.selectedScenes().length }} selected)
-          </button>
-        </div>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Draw an area on the map, then search for available satellite imagery.
+        </p>
       </div>
 
-      <div class="hidden w-72 shrink-0 lg:block">
-        <app-order-summary />
+      <!-- Map — full width, prominent -->
+      <app-imagery-map #imageryMap
+        [accentColor]="accentColor()"
+        [stacResults]="store.stacResults()"
+        [selectedSceneIds]="selectedSceneIds()"
+        [hasAoi]="hasAoi()"
+        (aoiChanged)="onAoiChanged($event)"
+        (sceneClicked)="onSceneClicked($event)" />
+
+      <!-- Search controls — compact horizontal bar -->
+      <app-search-controls
+        [hasAoi]="hasAoi()"
+        [isLoading]="isSearching()"
+        [accentColor]="accentColor()"
+        (search)="onSearch($event)" />
+
+      <!-- Results area -->
+      <app-scene-grid
+        [scenes]="store.stacResults()"
+        [totalMatched]="store.stacTotalMatched()"
+        [selectedIds]="selectedSceneIds()"
+        [accentColor]="accentColor()"
+        [isLoading]="isSearching()"
+        [hasSearched]="hasSearched()"
+        [searchError]="searchError()"
+        (sceneToggled)="onSceneClicked($event)"
+        (loadMore)="onLoadMore()"
+        (retry)="onRetry()" />
+
+      <!-- Navigation -->
+      <div class="flex items-center justify-between border-t border-border pt-4">
+        <button class="rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80"
+                (click)="goBack()">Back</button>
+        <button class="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                [style.background-color]="accentColor()"
+                [disabled]="store.selectedScenes().length === 0"
+                (click)="goNext()">
+          Continue ({{ store.selectedScenes().length }} selected)
+        </button>
       </div>
     </div>
   `,
 })
-export class BrowseImageryComponent implements OnInit {
+export class BrowseImageryComponent {
   store = inject(OrderStoreService);
   private catalogApi = inject(CatalogApiService);
   private router = inject(Router);
   private mapRef = viewChild<ImageryMapComponent>('imageryMap');
 
-  collections: string[] = [];
+  isSearching = signal(false);
+  hasSearched = signal(false);
+  searchError = signal<string | null>(null);
+  private lastSearchForm: SearchFormValues | null = null;
+
+  accentColor = (): string => this.store.family()?.color ?? '#3B82F6';
+  hasAoi = (): boolean => this.store.areaOfInterest() !== null;
+  selectedSceneIds = (): string[] => this.store.selectedScenes().map(s => s.id);
 
   constructor() {
-    // Update map footprints when results or selection changes
     effect(() => {
       const results = this.store.stacResults();
       const ids = this.selectedSceneIds();
@@ -81,40 +89,45 @@ export class BrowseImageryComponent implements OnInit {
     });
   }
 
-  selectedSceneIds = (): string[] => {
-    return this.store.selectedScenes().map(s => s.id);
-  };
-
-  ngOnInit(): void {
-    this.catalogApi.getCollections().subscribe({
-      next: (cols) => this.collections = cols,
-      error: (err) => console.error('Failed to load collections:', err),
-    });
-  }
-
   onAoiChanged(aoi: AreaOfInterest): void {
     this.store.setAreaOfInterest(aoi);
     this.store.setStacSearchParams({ bbox: aoi.bbox });
   }
 
   onSearch(form: SearchFormValues): void {
+    this.lastSearchForm = form;
     const aoi = this.store.areaOfInterest();
     const bbox = aoi?.bbox ?? null;
     const datetime = form.startDate && form.endDate
       ? `${form.startDate}T00:00:00Z/${form.endDate}T23:59:59Z`
       : undefined;
 
+    this.isSearching.set(true);
+    this.searchError.set(null);
+
     this.catalogApi.searchCatalog({
       bbox: bbox ?? undefined,
       datetime,
-      collections: form.collections.length > 0 ? form.collections : undefined,
       limit: 20,
     }).subscribe({
       next: (response) => {
         this.store.setStacResults(response.features, response.numberMatched);
+        this.isSearching.set(false);
+        this.hasSearched.set(true);
       },
-      error: (err) => console.error('Search failed:', err),
+      error: (err) => {
+        console.error('Search failed:', err);
+        this.isSearching.set(false);
+        this.hasSearched.set(true);
+        this.searchError.set('Search failed. Make sure the backend is running.');
+      },
     });
+  }
+
+  onRetry(): void {
+    if (this.lastSearchForm) {
+      this.onSearch(this.lastSearchForm);
+    }
   }
 
   onSceneClicked(scene: StacItem): void {
@@ -138,7 +151,6 @@ export class BrowseImageryComponent implements OnInit {
     this.catalogApi.searchCatalog({
       bbox: aoi?.bbox ?? undefined,
       datetime,
-      collections: params.collections.length > 0 ? params.collections : undefined,
       limit: 20,
       offset: currentResults.length,
     }).subscribe({
