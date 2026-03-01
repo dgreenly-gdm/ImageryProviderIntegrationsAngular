@@ -69,6 +69,14 @@ export class BrowseImageryComponent {
   private router = inject(Router);
   private mapRef = viewChild<ImageryMapComponent>('imageryMap');
 
+  /** Only search imagery collections that have thumbnails */
+  private readonly IMAGERY_COLLECTIONS = [
+    'sentinel-2-l2a',
+    'sentinel-2-l1c',
+    'sentinel-1-grd',
+    'landsat-c2-l1-oli-tirs',
+  ];
+
   isSearching = signal(false);
   hasSearched = signal(false);
   searchError = signal<string | null>(null);
@@ -108,6 +116,7 @@ export class BrowseImageryComponent {
     this.catalogApi.searchCatalog({
       bbox: bbox ?? undefined,
       datetime,
+      collections: this.IMAGERY_COLLECTIONS,
       limit: 20,
     }).subscribe({
       next: (response) => {
@@ -151,6 +160,7 @@ export class BrowseImageryComponent {
     this.catalogApi.searchCatalog({
       bbox: aoi?.bbox ?? undefined,
       datetime,
+      collections: this.IMAGERY_COLLECTIONS,
       limit: 20,
       offset: currentResults.length,
     }).subscribe({
